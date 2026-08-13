@@ -45,6 +45,14 @@
     "README.md"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LioRael/lenso-email-provider-service.git"
+  },
+  "homepage": "https://github.com/LioRael/lenso-email-provider-service#readme",
+  "bugs": {
+    "url": "https://github.com/LioRael/lenso-email-provider-service/issues"
+  },
   "packageManager": "pnpm@11.19.0",
   "publishConfig": {
     "access": "public"
