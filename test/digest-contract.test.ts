@@ -30,10 +30,11 @@ describe("cross-repository email contracts", () => {
   });
 
   test("serializes the Provider Manifest in the Rust canonical shape", () => {
-    expect(providerManifest.admin).toBeNull();
+    expect(providerManifest).not.toHaveProperty("admin");
     expect(providerManifest).not.toHaveProperty("config");
     expect(providerManifest.module_id).toBe(MODULE_ID);
-    expect(providerManifest.requires).toEqual([]);
+    expect(providerManifest).not.toHaveProperty("requires");
+    expect(providerManifest.runtime).toMatchObject({ schedules: [] });
   });
 
   test("exports the canonical qualified Module identity from the Service manifest", () => {

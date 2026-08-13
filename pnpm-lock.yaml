@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@lenso/service-kit':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       nodemailer:
         specifier: ^9.0.5
         version: 9.0.5
@@ -277,8 +277,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@lenso/service-kit@0.6.0':
-    resolution: {integrity: sha512-I2ytLj94YjhsFl2wQKySrnPMGbqe+1bewGywV/kCj9TCp2z284E1NK4vfIZJaRKmutqN+rcQzMyoJZxdvqzFug==}
+  '@lenso/service-kit@0.6.1':
+    resolution: {integrity: sha512-7pxw/2W558EB5sr1HCiTElo6lks9c/ehlqJNrM9IzSQ7XS5WC5fiBwGZOKOTBbDuS7UcQw7pnLySLQJKXwgaAQ==}
 
   '@manypkg/find-root@1.1.0':
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
@@ -1423,7 +1423,7 @@ snapshots:
 
   '@lenso/cli@0.7.1': {}
 
-  '@lenso/service-kit@0.6.0': {}
+  '@lenso/service-kit@0.6.1': {}
 
   '@manypkg/find-root@1.1.0':
     dependencies:
