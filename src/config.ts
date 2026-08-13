@@ -1,4 +1,5 @@
 export type TransportKind = "fake" | "smtp";
+export type FakeEmailMode = "accepted" | "delivered" | "temporary_failure" | "permanent_failure" | "delivery_unknown";
 
 export interface ServiceConfig {
   bindHost: string;
@@ -8,7 +9,8 @@ export interface ServiceConfig {
   dispatchLeaseMs: number;
   providerName: string;
   transport: TransportKind;
-  fakeMode: "accepted" | "delivered" | "temporary_failure" | "permanent_failure" | "delivery_unknown";
+  fakeMode: FakeEmailMode;
+  fakeSequence: readonly FakeEmailMode[];
   smtp?: {
     connectionTimeoutMs: number;
     host: string;
@@ -60,8 +62,15 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ServiceConfig 
     throw new Error("EMAIL_TRANSPORT must be fake or smtp");
   }
   const fakeMode = (env.EMAIL_FAKE_MODE ?? "delivered") as ServiceConfig["fakeMode"];
-  if (!["accepted", "delivered", "temporary_failure", "permanent_failure", "delivery_unknown"].includes(fakeMode)) {
+  const validFakeModes: readonly FakeEmailMode[] = ["accepted", "delivered", "temporary_failure", "permanent_failure", "delivery_unknown"];
+  if (!validFakeModes.includes(fakeMode)) {
     throw new Error("EMAIL_FAKE_MODE is invalid");
+  }
+  const fakeSequence = env.EMAIL_FAKE_SEQUENCE?.trim()
+    ? env.EMAIL_FAKE_SEQUENCE.split(",").map((value) => value.trim() as FakeEmailMode)
+    : [fakeMode];
+  if (fakeSequence.length > 20 || fakeSequence.some((mode) => !validFakeModes.includes(mode))) {
+    throw new Error("EMAIL_FAKE_SEQUENCE must contain 1 to 20 comma-separated fake modes");
   }
   const base: ServiceConfig = {
     autoMigrate: env.DATABASE_AUTO_MIGRATE === "true",
@@ -69,6 +78,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): ServiceConfig 
     databaseUrl: required(env, "DATABASE_URL"),
     dispatchLeaseMs: integer(env.EMAIL_DISPATCH_LEASE_MS, 30_000, "EMAIL_DISPATCH_LEASE_MS", 1_000, 300_000),
     fakeMode,
+    fakeSequence,
     port: integer(env.PORT, 4_112, "PORT", 1, 65_535),
     providerName: env.EMAIL_PROVIDER_NAME?.trim() || "lenso-email",
     transport,
@@ -122,6 +132,7 @@ export const redactedConfigSummary = (config: ServiceConfig) => ({
   providerAuth: config.providerBearerToken ? "configured" : "loopback-only",
   providerName: config.providerName,
   transport: config.transport,
+  ...(config.transport === "fake" ? { fakeSequence: config.fakeSequence } : {}),
   ...(config.smtp
     ? {
         smtp: {
