@@ -1,0 +1,52 @@
+{
+  "protocol": "lenso.service.v1",
+  "name": "lenso-email-provider-service",
+  "version": "0.1.0",
+  "provider": {
+    "name": "lenso-email-provider-service",
+    "summary": "Durable transactional email transport and remote receipt provider"
+  },
+  "compatibility": {
+    "providerProtocolVersion": "lenso.provider.v1",
+    "requiredHostFeatures": [
+      "provider.v1",
+      "provider.host-effects",
+      "service.status"
+    ],
+    "sdkLanguage": "ts",
+    "sdkVersion": "0.6.0"
+  },
+  "env": [
+    { "name": "DATABASE_URL", "required": true },
+    { "name": "EMAIL_TRANSPORT", "required": true, "example": "fake" }
+  ],
+  "health": {
+    "manifestUrl": "http://127.0.0.1:4112/lenso/service/v1/manifest",
+    "readyUrl": "http://127.0.0.1:4112/lenso/service/v1/status",
+    "livenessUrl": "http://127.0.0.1:4112/lenso/service/v1/status"
+  },
+  "localProcess": {
+    "command": "pnpm start",
+    "autoStart": true,
+    "readyTimeoutMs": 15000
+  },
+  "install": {
+    "services": [
+      {
+        "name": "lenso-email-provider-service",
+        "command": "pnpm start",
+        "readyUrl": "http://127.0.0.1:4112/lenso/service/v1/status",
+        "autoStart": true,
+        "readyTimeoutMs": 15000
+      }
+    ]
+  },
+  "requiredEnv": ["DATABASE_URL", "EMAIL_TRANSPORT"],
+  "modules": [
+    {
+      "name": "lenso/email-delivery",
+      "version": "0.1.0",
+      "capabilities": []
+    }
+  ]
+}
