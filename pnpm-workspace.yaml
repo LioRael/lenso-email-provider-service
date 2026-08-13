@@ -1,0 +1,7 @@
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - "@lenso/cli@0.7.1"
+  - "@lenso/service-kit@0.6.0"
