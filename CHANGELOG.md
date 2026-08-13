@@ -1,5 +1,11 @@
 # @lenso/email-provider-service
 
+## 0.1.1
+
+### Patch Changes
+
+- f4c8c17: Allow deterministic fake transport sequences for product-level retry acceptance without adding a Service-owned retry policy.
+
 ## 0.1.0
 
 ### Minor Changes
