@@ -3,6 +3,28 @@ import { describe, expect, test } from "vitest";
 import { loadConfig, redactedConfigSummary } from "../src/config.js";
 
 describe("credential references", () => {
+  test("loads a bounded deterministic fake sequence", () => {
+    const config = loadConfig({
+      DATABASE_URL: "postgres://localhost/email",
+      EMAIL_FAKE_SEQUENCE: "temporary_failure, delivered",
+    });
+
+    expect(config.fakeSequence).toEqual(["temporary_failure", "delivered"]);
+    expect(redactedConfigSummary(config)).toMatchObject({
+      fakeSequence: ["temporary_failure", "delivered"],
+      transport: "fake",
+    });
+  });
+
+  test("rejects malformed or unbounded fake sequences", () => {
+    expect(() => loadConfig({ DATABASE_URL: "postgres://localhost/email", EMAIL_FAKE_SEQUENCE: "delivered,nope" })).toThrow(
+      "EMAIL_FAKE_SEQUENCE",
+    );
+    expect(() =>
+      loadConfig({ DATABASE_URL: "postgres://localhost/email", EMAIL_FAKE_SEQUENCE: Array(21).fill("delivered").join(",") }),
+    ).toThrow("EMAIL_FAKE_SEQUENCE");
+  });
+
   test("requires Provider authentication outside loopback", () => {
     expect(() =>
       loadConfig({

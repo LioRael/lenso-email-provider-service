@@ -22,7 +22,7 @@ import { SmtpEmailTransport } from "./transports/smtp.js";
 const { Pool } = pg;
 
 const transportFor = (config: ServiceConfig): EmailTransport => {
-  if (config.transport === "fake") return new FakeEmailTransport([config.fakeMode]);
+  if (config.transport === "fake") return new FakeEmailTransport(config.fakeSequence);
   if (!config.smtp) throw new Error("SMTP configuration is required");
   return new SmtpEmailTransport(config.smtp);
 };

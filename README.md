@@ -79,6 +79,11 @@ The fake transport is deterministic and supports `accepted`, `delivered`,
 authoritative `receipt-observed(kind=delivered)` event. It is an acceptance
 transport, not a production transport.
 
+For a multi-attempt acceptance scenario, `EMAIL_FAKE_SEQUENCE` accepts one to
+20 comma-separated modes and advances once per actual transport send. For
+example, `temporary_failure,delivered` proves an operator retry without adding
+a retry policy to the Service. Once exhausted, the last mode is reused.
+
 The HTTP listener defaults to loopback (`HOST=127.0.0.1`). Binding outside
 loopback, such as `HOST=0.0.0.0` in a container, requires
 `LENSO_PROVIDER_BEARER_TOKEN`; the Service Kit authenticates every Provider V1
