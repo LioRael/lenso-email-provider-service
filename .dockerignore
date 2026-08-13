@@ -1,0 +1,8 @@
+.git
+.github
+.changeset
+node_modules
+dist
+.env
+*.tgz
+pnpm-lock.local.yaml
