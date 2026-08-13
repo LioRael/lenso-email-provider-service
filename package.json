@@ -1,6 +1,6 @@
 {
   "name": "@lenso/email-provider-service",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Host-managed Lenso Provider Service for transactional email delivery",
   "type": "module",
   "engines": {
