@@ -8,8 +8,16 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { DispatchEngine } from "../../src/dispatch.js";
 import { migrate } from "../../src/migrate.js";
 import { ingestAuthenticatedReceipt } from "../../src/receipts.js";
+import { startService } from "../../src/server.js";
+import {
+  emailContractBundleDigest,
+  manifestDigest,
+  moduleReleaseDigest,
+  serviceReleaseDigest,
+} from "../../src/service.js";
 import { PostgresEmailLedger, PostgresProviderInvocationStore } from "../../src/store/postgres.js";
 import { FakeEmailTransport } from "../../src/transports/fake.js";
+import { DISPATCH_FUNCTION } from "../../src/contracts.js";
 import { dispatchFixture } from "../fixtures.js";
 
 const { Pool } = pg;
@@ -96,4 +104,104 @@ postgres("Postgres durability", () => {
     await expect(ingestAuthenticatedReceipt(new PostgresEmailLedger(pool), input)).resolves.toEqual({ ...inserted, kind: "replay" });
     await expect(new PostgresEmailLedger(pool).getLatestReceipt(request.functionRunId)).resolves.toMatchObject({ kind: "delivered", remoteId: input.remoteId });
   }, 20_000);
+
+  test("recovers a committed Provider outcome after restart without sending again when ack was lost", async () => {
+    const suffix = randomUUID();
+    const invocationId = `provider-runtime-restart-${suffix}`;
+    const request = dispatchFixture({
+      attemptId: `attempt-${suffix}`,
+      deliveryId: `delivery-${suffix}`,
+      functionRunId: `function-${suffix}`,
+      idempotencyKey: `invitation-${suffix}`,
+    });
+    const transport = new FakeEmailTransport(["delivered"]);
+    const config = {
+      autoMigrate: false,
+      bindHost: "127.0.0.1",
+      databaseUrl: databaseUrl!,
+      dispatchLeaseMs: 30_000,
+      fakeMode: "delivered" as const,
+      fakeSequence: ["delivered" as const],
+      port: 0,
+      providerName: "restart-fixture",
+      transport: "fake" as const,
+    };
+    const providerInvocation = {
+      actor: { kind: "system" as const },
+      attempt: 1,
+      causationId: null,
+      contentType: "application/json",
+      correlationId: request.context.correlationId,
+      deadline: "2099-01-01T00:00:00.000Z",
+      exportKey: "email-delivery",
+      inputContractDigest: emailContractBundleDigest,
+      invocationId,
+      manifestDigest,
+      mode: "durable" as const,
+      moduleReleaseDigest,
+      operationKind: "runtime_function" as const,
+      operationName: DISPATCH_FUNCTION,
+      operationVersion: "1",
+      outputContractDigest: emailContractBundleDigest,
+      payload: {
+        actor: { kind: "system" },
+        attempt: 1,
+        correlation_id: request.context.correlationId,
+        function_name: DISPATCH_FUNCTION,
+        function_run_id: request.functionRunId,
+        input: request,
+        request_id: request.functionRunId,
+        trace: {},
+      },
+      protocol: "lenso.provider.v1" as const,
+      requestId: `request-${invocationId}`,
+      serviceReleaseDigest,
+      tenantId: "tenant-restart",
+      trace: {},
+    };
+
+    const first = await startService(config, transport);
+    let firstOutcome: { outcomeDigest: string; result: { output: { outcome: string } } };
+    try {
+      const base = `${new URL(first.baseUrl).origin}/lenso/provider/v1`;
+      const response = await fetch(`${base}/exports/email-delivery/runtime:invoke`, {
+        body: JSON.stringify(providerInvocation),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      expect(response.status).toBe(200);
+      firstOutcome = await response.json() as typeof firstOutcome;
+      expect(firstOutcome.result.output.outcome).toBe("accepted");
+      expect(transport.sends).toBe(1);
+      // Deliberately close before ack to model a Host timeout/crash after commit.
+    } finally {
+      await first.close();
+    }
+
+    const restarted = await startService(config, transport);
+    try {
+      const base = `${new URL(restarted.baseUrl).origin}/lenso/provider/v1`;
+      const recovered = await fetch(`${base}/invocations/${invocationId}`);
+      expect(recovered.status).toBe(200);
+      await expect(recovered.json()).resolves.toEqual(firstOutcome!);
+
+      const replay = await fetch(`${base}/exports/email-delivery/runtime:invoke`, {
+        body: JSON.stringify(providerInvocation),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      expect(replay.status).toBe(200);
+      await expect(replay.json()).resolves.toEqual(firstOutcome!);
+      expect(transport.sends).toBe(1);
+
+      const ack = await fetch(`${base}/invocations/${invocationId}:ack`, {
+        body: JSON.stringify({ invocationId, outcomeDigest: firstOutcome!.outcomeDigest }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      expect(ack.status).toBe(200);
+    } finally {
+      await restarted.close();
+    }
+  }, 30_000);
 });
